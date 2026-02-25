@@ -22,7 +22,7 @@ export function createInvestmentsRouter(db: Pool): Router {
    */
   router.get('/', requireInvestor, async (req: Request, res: Response) => {
     const authenticatedReq = req as AuthenticatedRequest;
-    const investorId = authenticatedReq.user.sub;
+    const investorId = authenticatedReq.user.id;
 
     const rawLimit = req.query['limit'];
     const rawOffset = req.query['offset'];

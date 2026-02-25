@@ -105,7 +105,7 @@ describe('requireInvestor', () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect((req as AuthenticatedRequest).user).toEqual({
-      sub: 'investor-1',
+      id: 'investor-1',
       role: 'investor',
     });
   });

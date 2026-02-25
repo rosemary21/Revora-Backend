@@ -3,8 +3,8 @@ import crypto from 'crypto';
 
 export interface AuthenticatedRequest extends Request {
   user: {
-    sub: string;
-    role: string;
+    id: string;
+    role: 'issuer' | 'investor' | 'admin';
   };
 }
 
@@ -79,9 +79,37 @@ export function requireInvestor(
       return;
     }
 
-    (req as AuthenticatedRequest).user = { sub: payload.sub, role: payload.role };
+    (req as AuthenticatedRequest).user = {
+      id: payload.sub,
+      role: 'investor',
+    };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+/**
+ * Mock authentication middleware.
+ * In a real application, this would verify a JWT or session.
+ * For this task, we assume the issuer ID is provided in the 'X-Issuer-Id' header.
+ */
+export const authMiddleware = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const issuerId = req.header('X-Issuer-Id');
+
+  if (!issuerId) {
+    res.status(401).json({ error: 'Unauthorized: Missing Issuer ID' });
+    return;
+  }
+
+  req.user = {
+    id: issuerId,
+    role: 'issuer',
+  };
+
+  next();
+};
