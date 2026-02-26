@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import { dbHealth, closePool } from './db/client';
 import {
   createMilestoneValidationRouter,
   DomainEventPublisher,
@@ -13,7 +14,7 @@ import {
 } from './vaults/milestoneValidationRoute';
 
 const app = express();
-const port = process.env.PORT ?? 4000;
+const port = process.env.PORT ?? 3000;
 
 class InMemoryMilestoneRepository implements MilestoneRepository {
   constructor(private readonly milestones = new Map<string, Milestone>()) {}
@@ -138,8 +139,13 @@ app.use(
   })
 );
 
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', service: 'revora-backend' });
+app.get('/health', async (_req: Request, res: Response) => {
+  const db = await dbHealth();
+  res.status(db.healthy ? 200 : 503).json({
+    status: db.healthy ? 'ok' : 'degraded',
+    service: 'revora-backend',
+    db,
+  });
 });
 
 app.get('/api/overview', (_req: Request, res: Response) => {
@@ -149,6 +155,16 @@ app.get('/api/overview', (_req: Request, res: Response) => {
       'Backend API skeleton for tokenized revenue-sharing on Stellar (offerings, investments, revenue distribution).'
   });
 });
+
+const shutdown = async (signal: string) => {
+  console.log(`\n[server] ${signal} DB shutting down…`);
+  await closePool();
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 
 app.listen(port, () => {
   // eslint-disable-next-line no-console
